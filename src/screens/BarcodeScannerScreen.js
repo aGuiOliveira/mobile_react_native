@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, Button, Alert } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 
-export default function BarcodeScannerScreen({ navigation }) {
+export default function BarcodeScannerScreen({ navigation, route }) {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
 
@@ -17,6 +17,8 @@ export default function BarcodeScannerScreen({ navigation }) {
         onPress: () => {
           navigation.navigate('Home', {
             scannedBarcode: data,
+            savedName: route.params?.currentName,
+            savedPrice: route.params?.currentPrice,
           });
         },
       },

@@ -1,11 +1,31 @@
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, Button, Alert, FlatList } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Button,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+} from "react-native";
 import {
   createProduct,
   getProducts,
   deleteProduct,
   updateProduct,
 } from "../firebase/productService";
+
+function formatPrice(text) {
+  const digits = text.replace(/\D/g, "");
+  if (!digits) return "";
+  const cents = parseInt(digits, 10);
+  const reais = (cents / 100).toFixed(2);
+  const [intPart, decPart] = reais.split(".");
+  const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `R$ ${formattedInt},${decPart}`;
+}
 
 export default function HomeScreen({ navigation, route }) {
   const [name, setName] = useState("");
@@ -31,6 +51,8 @@ export default function HomeScreen({ navigation, route }) {
   useEffect(() => {
     if (route.params?.scannedBarcode) {
       setBarcode(String(route.params.scannedBarcode));
+      if (route.params?.savedName !== undefined) setName(route.params.savedName);
+      if (route.params?.savedPrice !== undefined) setPrice(route.params.savedPrice);
     }
   }, [route.params?.scannedBarcode]);
 
@@ -81,34 +103,47 @@ export default function HomeScreen({ navigation, route }) {
     clearForm();
   }
 
-  async function handleDeleteProduct(productId) {
-    const confirmDelete = window.confirm(
+  function handleDeleteProduct(productId) {
+    Alert.alert(
+      "Confirmar exclusão",
       "Tem certeza que deseja excluir este produto?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Excluir",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteProduct(productId);
+              if (editingProductId === productId) clearForm();
+              Alert.alert("Sucesso", "Produto excluído com sucesso!");
+              await loadProducts();
+            } catch (error) {
+              console.error(error);
+              Alert.alert("Erro", "Não foi possível excluir o produto.");
+            }
+          },
+        },
+      ]
     );
-
-    if (!confirmDelete) return;
-
-    try {
-      await deleteProduct(productId);
-
-      if (editingProductId === productId) {
-        clearForm();
-      }
-
-      Alert.alert("Sucesso", "Produto excluído com sucesso!");
-      await loadProducts();
-    } catch (error) {
-      console.error(error);
-      Alert.alert("Erro", "Não foi possível excluir o produto.");
-    }
   }
 
   function handleOpenScanner() {
-    navigation.navigate("BarcodeScanner");
+    navigation.navigate("BarcodeScanner", {
+      currentName: name,
+      currentPrice: price,
+    });
   }
 
-  return (
-    <View style={{ flex: 1, padding: 20 }}>
+  const inputStyle = {
+    borderWidth: 1,
+    marginBottom: 10,
+    padding: 10,
+    borderRadius: 5,
+  };
+
+  const formHeader = (
+    <View style={{ padding: 20 }}>
       <Text style={{ fontSize: 24, marginTop: 40, marginBottom: 20 }}>
         Bem-vindo!
       </Text>
@@ -121,37 +156,26 @@ export default function HomeScreen({ navigation, route }) {
         placeholder="Nome do produto"
         value={name}
         onChangeText={setName}
-        style={{
-          borderWidth: 1,
-          marginBottom: 10,
-          padding: 10,
-          borderRadius: 5,
-        }}
+        returnKeyType="next"
+        style={inputStyle}
       />
 
       <TextInput
-        placeholder="Preço"
+        placeholder="Preço (ex: R$ 10,00)"
         value={price}
-        onChangeText={setPrice}
+        onChangeText={(text) => setPrice(formatPrice(text))}
         keyboardType="numeric"
-        style={{
-          borderWidth: 1,
-          marginBottom: 10,
-          padding: 10,
-          borderRadius: 5,
-        }}
+        returnKeyType="next"
+        style={inputStyle}
       />
 
       <TextInput
         placeholder="Código de barras"
         value={barcode}
         onChangeText={setBarcode}
-        style={{
-          borderWidth: 1,
-          marginBottom: 20,
-          padding: 10,
-          borderRadius: 5,
-        }}
+        returnKeyType="done"
+        onSubmitEditing={Keyboard.dismiss}
+        style={{ ...inputStyle, marginBottom: 20 }}
       />
 
       <Button
@@ -168,11 +192,26 @@ export default function HomeScreen({ navigation, route }) {
       <Text style={{ fontSize: 20, marginTop: 30, marginBottom: 10 }}>
         Produtos cadastrados
       </Text>
+    </View>
+  );
 
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       <FlatList
         data={products}
         keyExtractor={(item) => item.id}
-        ListEmptyComponent={<Text>Nenhum produto cadastrado.</Text>}
+        ListHeaderComponent={formHeader}
+        contentContainerStyle={{ paddingBottom: 20 }}
+        keyboardShouldPersistTaps="handled"
+        onScrollBeginDrag={Keyboard.dismiss}
+        ListEmptyComponent={
+          <Text style={{ paddingHorizontal: 20 }}>
+            Nenhum produto cadastrado.
+          </Text>
+        }
         renderItem={({ item }) => (
           <View
             style={{
@@ -180,6 +219,7 @@ export default function HomeScreen({ navigation, route }) {
               borderRadius: 5,
               padding: 10,
               marginBottom: 10,
+              marginHorizontal: 20,
             }}
           >
             <Text>Nome: {item.name}</Text>
@@ -193,6 +233,7 @@ export default function HomeScreen({ navigation, route }) {
             <View style={{ marginTop: 10 }}>
               <Button
                 title="Excluir"
+                color="red"
                 onPress={() => handleDeleteProduct(item.id)}
               />
             </View>
@@ -200,9 +241,9 @@ export default function HomeScreen({ navigation, route }) {
         )}
       />
 
-      <View style={{ marginTop: 20 }}>
+      <View style={{ padding: 20 }}>
         <Button title="Sair" onPress={() => navigation.navigate("Login")} />
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
