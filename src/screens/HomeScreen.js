@@ -3,12 +3,13 @@ import {
   View,
   Text,
   TextInput,
-  Button,
+  TouchableOpacity,
   Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
   Keyboard,
+  StyleSheet,
 } from "react-native";
 import {
   createProduct,
@@ -16,6 +17,7 @@ import {
   deleteProduct,
   updateProduct,
 } from "../firebase/productService";
+import { colors } from "../theme/colors";
 
 function formatPrice(text) {
   const digits = text.replace(/\D/g, "");
@@ -83,7 +85,6 @@ export default function HomeScreen({ navigation, route }) {
         await createProduct(productData);
         Alert.alert("Sucesso", "Produto cadastrado com sucesso!");
       }
-
       clearForm();
       await loadProducts();
     } catch (error) {
@@ -97,10 +98,6 @@ export default function HomeScreen({ navigation, route }) {
     setPrice(product.price || "");
     setBarcode(product.barcode || "");
     setEditingProductId(product.id);
-  }
-
-  function handleCancelEdit() {
-    clearForm();
   }
 
   function handleDeleteProduct(productId) {
@@ -135,69 +132,65 @@ export default function HomeScreen({ navigation, route }) {
     });
   }
 
-  const inputStyle = {
-    borderWidth: 1,
-    marginBottom: 10,
-    padding: 10,
-    borderRadius: 5,
-  };
-
   const formHeader = (
-    <View style={{ padding: 20 }}>
-      <Text style={{ fontSize: 24, marginTop: 40, marginBottom: 20 }}>
-        Bem-vindo!
-      </Text>
+    <View style={styles.formContainer}>
+      <Text style={styles.welcomeTitle}>Bem-vindo!</Text>
 
-      <View style={{ marginBottom: 20 }}>
-        <Button title="Ler código de barras" onPress={handleOpenScanner} />
-      </View>
+      <TouchableOpacity style={styles.scanButton} onPress={handleOpenScanner}>
+        <Text style={styles.scanButtonText}>Ler código de barras</Text>
+      </TouchableOpacity>
 
       <TextInput
         placeholder="Nome do produto"
+        placeholderTextColor={colors.placeholder}
         value={name}
         onChangeText={setName}
         returnKeyType="next"
-        style={inputStyle}
+        style={styles.input}
       />
 
       <TextInput
         placeholder="Preço (ex: R$ 10,00)"
+        placeholderTextColor={colors.placeholder}
         value={price}
         onChangeText={(text) => setPrice(formatPrice(text))}
         keyboardType="numeric"
         returnKeyType="next"
-        style={inputStyle}
+        style={styles.input}
       />
 
       <TextInput
         placeholder="Código de barras"
+        placeholderTextColor={colors.placeholder}
         value={barcode}
         onChangeText={setBarcode}
         returnKeyType="done"
         onSubmitEditing={Keyboard.dismiss}
-        style={{ ...inputStyle, marginBottom: 20 }}
+        style={[styles.input, { marginBottom: 20 }]}
       />
 
-      <Button
-        title={editingProductId ? "Atualizar produto" : "Cadastrar produto"}
-        onPress={handleSaveProduct}
-      />
+      <TouchableOpacity style={styles.primaryButton} onPress={handleSaveProduct}>
+        <Text style={styles.primaryButtonText}>
+          {editingProductId ? "Atualizar produto" : "Cadastrar produto"}
+        </Text>
+      </TouchableOpacity>
 
       {editingProductId && (
-        <View style={{ marginTop: 10 }}>
-          <Button title="Cancelar edição" onPress={handleCancelEdit} />
-        </View>
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={() => clearForm()}
+        >
+          <Text style={styles.secondaryButtonText}>Cancelar edição</Text>
+        </TouchableOpacity>
       )}
 
-      <Text style={{ fontSize: 20, marginTop: 30, marginBottom: 10 }}>
-        Produtos cadastrados
-      </Text>
+      <Text style={styles.sectionTitle}>Produtos cadastrados</Text>
     </View>
   );
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <FlatList
@@ -208,42 +201,192 @@ export default function HomeScreen({ navigation, route }) {
         keyboardShouldPersistTaps="handled"
         onScrollBeginDrag={Keyboard.dismiss}
         ListEmptyComponent={
-          <Text style={{ paddingHorizontal: 20 }}>
-            Nenhum produto cadastrado.
-          </Text>
+          <Text style={styles.emptyText}>Nenhum produto cadastrado.</Text>
         }
         renderItem={({ item }) => (
-          <View
-            style={{
-              borderWidth: 1,
-              borderRadius: 5,
-              padding: 10,
-              marginBottom: 10,
-              marginHorizontal: 20,
-            }}
-          >
-            <Text>Nome: {item.name}</Text>
-            <Text>Preço: {item.price}</Text>
-            <Text>Código de barras: {item.barcode || "Não informado"}</Text>
+          <View style={styles.productCard}>
+            <Text style={styles.productName}>{item.name}</Text>
+            <Text style={styles.productDetail}>Preço: {item.price}</Text>
+            <Text style={styles.productDetail}>
+              Código: {item.barcode || "Não informado"}
+            </Text>
 
-            <View style={{ marginTop: 10 }}>
-              <Button title="Editar" onPress={() => handleEditProduct(item)} />
-            </View>
+            <View style={styles.cardActions}>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={() => handleEditProduct(item)}
+              >
+                <Text style={styles.editButtonText}>Editar</Text>
+              </TouchableOpacity>
 
-            <View style={{ marginTop: 10 }}>
-              <Button
-                title="Excluir"
-                color="red"
+              <TouchableOpacity
+                style={styles.deleteButton}
                 onPress={() => handleDeleteProduct(item.id)}
-              />
+              >
+                <Text style={styles.deleteButtonText}>Excluir</Text>
+              </TouchableOpacity>
             </View>
           </View>
         )}
       />
 
-      <View style={{ padding: 20 }}>
-        <Button title="Sair" onPress={() => navigation.navigate("Login")} />
+      <View style={styles.logoutContainer}>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={() => navigation.navigate("Login")}
+        >
+          <Text style={styles.logoutButtonText}>Sair</Text>
+        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  formContainer: {
+    padding: 24,
+    paddingTop: 52,
+  },
+  welcomeTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 24,
+  },
+  scanButton: {
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 14,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  scanButtonText: {
+    color: colors.primary,
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  input: {
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    color: colors.textPrimary,
+    fontSize: 15,
+  },
+  primaryButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  primaryButtonText: {
+    color: '#0D1117',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 14,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  secondaryButtonText: {
+    color: colors.textSecondary,
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginTop: 28,
+    marginBottom: 4,
+  },
+  emptyText: {
+    color: colors.textSecondary,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+  },
+  productCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    marginHorizontal: 24,
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  productDetail: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 2,
+  },
+  cardActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 14,
+  },
+  editButton: {
+    flex: 1,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 10,
+    padding: 10,
+    alignItems: 'center',
+  },
+  editButtonText: {
+    color: colors.primary,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  deleteButton: {
+    flex: 1,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    borderRadius: 10,
+    padding: 10,
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    color: colors.danger,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  logoutContainer: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  logoutButton: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 14,
+    alignItems: 'center',
+  },
+  logoutButtonText: {
+    color: colors.textSecondary,
+    fontWeight: '600',
+    fontSize: 15,
+  },
+});

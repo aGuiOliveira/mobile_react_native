@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Button, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { resetUserPassword } from '../firebase/authService';
+import { colors } from '../theme/colors';
 
 export default function ForgotPasswordScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -10,7 +11,6 @@ export default function ForgotPasswordScreen({ navigation }) {
       Alert.alert('Atenção', 'Informe seu email.');
       return;
     }
-
     try {
       await resetUserPassword(email.trim());
       Alert.alert(
@@ -24,20 +24,59 @@ export default function ForgotPasswordScreen({ navigation }) {
   }
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', padding: 20 }}>
-      <Text style={{ fontSize: 24, marginBottom: 20 }}>Recuperar Senha</Text>
+    <View style={styles.container}>
+      <Text style={styles.heading}>Informe seu email para receber o link de recuperação.</Text>
 
       <TextInput
         placeholder="Email"
+        placeholderTextColor={colors.placeholder}
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
         keyboardType="email-address"
-        style={{ borderWidth: 1, marginBottom: 10, padding: 10 }}
+        style={styles.input}
       />
 
-      <Button title="Enviar" onPress={handleResetPassword} />
+      <TouchableOpacity style={styles.primaryButton} onPress={handleResetPassword}>
+        <Text style={styles.primaryButtonText}>Enviar</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: colors.background,
+  },
+  heading: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    marginBottom: 28,
+    lineHeight: 22,
+  },
+  input: {
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    color: colors.textPrimary,
+    fontSize: 15,
+  },
+  primaryButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  primaryButtonText: {
+    color: '#0D1117',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+});
